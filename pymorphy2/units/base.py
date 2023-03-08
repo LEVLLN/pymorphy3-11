@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals, division
-import inspect
 
 from pymorphy2.utils import kwargs_repr
 from pymorphy2.units.utils import (
@@ -9,17 +8,30 @@ from pymorphy2.units.utils import (
     add_tag_if_not_seen,
 )
 
+try:
+    from inspect import getargspec
+
+
+    def inspect_args(func):
+        args, varargs, kw, default = getargspec(func)
+        return args
+
+except ImportError:
+    # inspect.getargspec was deprecated in 3.0
+    from inspect import getfullargspec
+
+
+    def inspect_args(func):
+        return getfullargspec(func).args
+
 
 class BaseAnalyzerUnit(object):
     """
     Base class for analyzer units.
-
     For parsing to work subclasses must implement `parse` method;
     as an optimization they may also override `tag` method.
-
     For inflection to work (this includes normalization) a subclass
     must implement `normalized` and `get_lexeme` methods.
-
     In __init__ method all parameters must be saved as instance variables
     for analyzer unit to work.
     """
@@ -67,7 +79,7 @@ class BaseAnalyzerUnit(object):
         """
         if cls.__init__ is object.__init__:
             return []
-        args, varargs, kw, default = inspect.getargspec(cls.__init__)
+        args = inspect_args(cls.__init__)
         return sorted(args[1:])
 
     def _get_params(self):
@@ -75,7 +87,6 @@ class BaseAnalyzerUnit(object):
         return dict(
             (key, getattr(self, key, None)) for key in self._get_param_names()
         )
-
 
 
 class AnalogyAnalizerUnit(BaseAnalyzerUnit):
@@ -126,3 +137,4 @@ class AnalogyAnalizerUnit(BaseAnalyzerUnit):
         base_method, this_method = methods_stack[-2:]
         base_analyzer = base_method[0]
         return base_analyzer, this_method
+
